@@ -8,17 +8,18 @@ import java.util.List;
  */
 public class EventDelegator implements Runnable {
     private final List<ElevatorController> elevatorControllers;
+    private Connector connector;
 
-    public EventDelegator(List<ElevatorController> elevatorControllers) {
+    public EventDelegator(List<ElevatorController> elevatorControllers, Connector connector) {
         this.elevatorControllers = elevatorControllers;
+        this.connector = connector;
     }
 
     private void readEvents() throws IOException {
-        Connector connector = new Connector();
-        connector.connect();
         String line;
         while ((line = connector.readLine()) != null) {
             System.out.println(line);
+            parseEvent(line);
         }
     }
 

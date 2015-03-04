@@ -29,7 +29,7 @@ public class Connector {
         return in.readLine();
     }
 
-    public void printLine () {
-        out.println("m 1 1");
+    public void printLine (String output) {
+        out.println(output);
     }
 }

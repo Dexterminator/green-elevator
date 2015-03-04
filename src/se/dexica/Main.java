@@ -8,12 +8,14 @@ public class Main {
     private static final int numberOfElevators = 3;
 
     public static void main(String[] args) throws IOException {
+        Connector connector = new Connector();
+        connector.connect();
         List<ElevatorController> elevatorControllers = new ArrayList<ElevatorController>();
         for (int i = 0; i < numberOfElevators; i++) {
-            ElevatorController elevatorController = new ElevatorController(i + 1);
+            ElevatorController elevatorController = new ElevatorController(i + 1, connector);
             elevatorControllers.add(elevatorController);
             new Thread(elevatorController).start();
         }
-        new Thread(new EventDelegator(elevatorControllers)).start();
+        new Thread(new EventDelegator(elevatorControllers, connector)).start();
     }
 }
