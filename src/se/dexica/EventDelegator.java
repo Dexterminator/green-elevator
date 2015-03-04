@@ -9,10 +9,12 @@ import java.util.List;
 public class EventDelegator implements Runnable {
     private final List<ElevatorController> elevatorControllers;
     private Connector connector;
+    private WorkOptimizer workOptimizer;
 
-    public EventDelegator(List<ElevatorController> elevatorControllers, Connector connector) {
+    public EventDelegator(List<ElevatorController> elevatorControllers, Connector connector, WorkOptimizer workOptimizer) {
         this.elevatorControllers = elevatorControllers;
         this.connector = connector;
+        this.workOptimizer = workOptimizer;
     }
 
     private void readEvents() throws IOException {
@@ -38,17 +40,27 @@ public class EventDelegator implements Runnable {
     }
 
     private void delegatePanelEvent(String elevatorString, String floorString) {
-        int elevator = Integer.parseInt(elevatorString);
+        int elevator = Integer.parseInt(elevatorString) - 1;
         int floor = Integer.parseInt(floorString);
         elevatorControllers.get(elevator).registerFloorRequest(floor);
     }
 
     private void delegateFloorButtonEvent(String floorString, String directionString) {
-
+        int floor = Integer.parseInt(floorString);
+        int directionInt = Integer.parseInt(directionString);
+        FloorButtonRequest.direction direction;
+        switch (directionInt) {
+            case 1: direction = FloorButtonRequest.direction.UP;
+                break;
+            case -1: direction = FloorButtonRequest.direction.DOWN;
+                break;
+            default: throw new IllegalArgumentException("wat");
+        }
+        workOptimizer.registerFloorButtonRequest(floor, direction);
     }
 
     private void delegatePositionEvent(String elevatorString, String positionString) {
-        int elevator = Integer.parseInt(elevatorString);
+        int elevator = Integer.parseInt(elevatorString) - 1;
         float position = Float.parseFloat(positionString);
         elevatorControllers.get(elevator).updatePosition(position);
     }

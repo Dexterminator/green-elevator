@@ -12,10 +12,12 @@ public class Main {
         connector.connect();
         List<ElevatorController> elevatorControllers = new ArrayList<ElevatorController>();
         for (int i = 0; i < numberOfElevators; i++) {
-            ElevatorController elevatorController = new ElevatorController(i + 1, connector);
+            ElevatorController elevatorController = new ElevatorController(i+1, connector);
             elevatorControllers.add(elevatorController);
             new Thread(elevatorController).start();
         }
-        new Thread(new EventDelegator(elevatorControllers, connector)).start();
+        WorkOptimizer workOptimizer = new WorkOptimizer(elevatorControllers, connector);
+        new Thread(new EventDelegator(elevatorControllers, connector, workOptimizer)).start();
+        new Thread(workOptimizer).start();
     }
 }
