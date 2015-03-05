@@ -16,7 +16,7 @@ public class Main {
             elevatorControllers.add(elevatorController);
             new Thread(elevatorController).start();
         }
-        WorkOptimizer workOptimizer = new WorkOptimizer(elevatorControllers, connector);
+        WorkOptimizer workOptimizer = new WorkOptimizer(elevatorControllers);
         new Thread(new EventDelegator(elevatorControllers, connector, workOptimizer)).start();
         new Thread(workOptimizer).start();
     }

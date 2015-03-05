@@ -1,5 +1,7 @@
 package se.dexica;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
@@ -11,7 +13,10 @@ public class ElevatorController implements Runnable {
     private final int id;
     private float position = 0.0f;
     private Direction direction = Direction.NONE;
-    BlockingQueue<Integer> floorRequests = new ArrayBlockingQueue<Integer>(2000);
+    private BlockingQueue<Integer> floorRequests = new ArrayBlockingQueue<Integer>(2000);
+    private List<Integer> stashedRequests = new ArrayList<Integer>();
+    private List<Integer> currentPath = new ArrayList<Integer>();
+    private int destination;
 
     public ElevatorController(int id, Connector connector) {
         this.id = id;
@@ -36,8 +41,13 @@ public class ElevatorController implements Runnable {
         return direction;
     }
 
-    private void move(int destination) throws InterruptedException {
-        if (position > destination) {
+    public synchronized int getDestination() {
+        return destination;
+    }
+
+    private void move() throws InterruptedException {
+        //TODO: Handle this in updatePosition instead!
+        if (getPosition() > destination) {
             direction = Direction.DOWN;
         } else {
             direction = Direction.UP;
@@ -45,31 +55,55 @@ public class ElevatorController implements Runnable {
         String output = "m " + id + " " + (direction == Direction.UP ? 1 : -1);
         System.out.println("Moving command made: " + output);
         connector.printLine(output);
-        while (true) {
-            float abs = Math.abs(getPosition() - (float) destination);
-            if (abs < 0.05) {
-                System.out.println("Arriving at destination, yeah!");
-                connector.printLine("m " + id + " " + 0);
-                connector.printLine("d " + id + " " + 1);
-                Thread.sleep(1000);
-                connector.printLine("d " + id + " " + -1);
-                Thread.sleep(1000);
-                direction = Direction.NONE;
-                break;
-            }
+        float abs = Math.abs(getPosition() - (float) destination);
+        while (abs < 0.05) {
+            abs = Math.abs(getPosition() - (float) destination);
         }
+        System.out.println("Arriving at destination, yeah!");
+        connector.printLine("m " + id + " " + 0);
+        connector.printLine("d " + id + " " + 1);
+        Thread.sleep(1000);
+        connector.printLine("d " + id + " " + -1);
+        Thread.sleep(1000);
+        direction = Direction.NONE;
     }
 
     @Override
     public void run() {
         while (true) {
             try {
-                int destination = floorRequests.take();
-                System.out.println("Destination retrieved making a move");
-                move(destination);
+                serveRequests();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
+    }
+
+    private void serveRequests() throws InterruptedException {
+        int newRequest = floorRequests.take();
+        if (direction == Direction.NONE) {
+            destination = newRequest;
+        } else if (direction == Direction.UP) {
+            if (newRequest < destination && newRequest - getPosition() > 0.05) {
+                currentPath.add(destination);
+                destination = newRequest;
+            } else if (newRequest > destination) {
+                currentPath.add(newRequest);
+            } else {
+                stashedRequests.add(newRequest);
+            }
+        } else if (direction == Direction.DOWN) {
+            if (newRequest > destination && newRequest - getPosition() < -0.05) {
+                currentPath.add(destination);
+                destination = newRequest;
+            } else if (newRequest < destination) {
+                currentPath.add(newRequest);
+            } else {
+                stashedRequests.add(newRequest);
+            }
+
+        }
+        System.out.println("Destination retrieved making a move");
+        move();
     }
 }

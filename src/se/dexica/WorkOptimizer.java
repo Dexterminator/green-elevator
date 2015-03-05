@@ -9,12 +9,10 @@ import java.util.concurrent.BlockingQueue;
  */
 public class WorkOptimizer implements Runnable{
     private List<ElevatorController> elevatorControllers;
-    private Connector connector;
     private BlockingQueue<FloorButtonRequest> floorButtonRequests = new ArrayBlockingQueue<FloorButtonRequest>(2000);
 
-    public WorkOptimizer(List<ElevatorController> elevatorControllers, Connector connector) {
+    public WorkOptimizer(List<ElevatorController> elevatorControllers) {
         this.elevatorControllers = elevatorControllers;
-        this.connector = connector;
     }
 
     public synchronized void registerFloorButtonRequest(int floor, Direction direction)
