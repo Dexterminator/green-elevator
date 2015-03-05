@@ -1,6 +1,5 @@
 package se.dexica;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -18,8 +17,56 @@ public class WorkOptimizer implements Runnable{
         this.connector = connector;
     }
 
-    public synchronized void registerFloorButtonRequest(int floor, FloorButtonRequest.direction direction) {
-        floorButtonRequests.add(new FloorButtonRequest(floor, direction));
+    public synchronized void registerFloorButtonRequest(int floor, Direction direction)
+        throws InterruptedException {
+        floorButtonRequests.put(new FloorButtonRequest(floor, direction));
+    }
+
+    public int score(FloorButtonRequest request, ElevatorController elevatorController) {
+        int score = 0;
+        float distance = (float) request.floor - elevatorController.getPosition();
+        if (elevatorController.getDirection() == Direction.NONE) {
+            float abs = Math.abs(distance);
+            if (abs < 0.05) {
+                score += 150;
+            } else if (abs < 1.05) {
+                score += 100;
+            } else if (abs < 2.05) {
+                score += 75;
+            } else if (abs < 3.05) {
+                score += 50;
+            } else if (abs < 4.05) {
+                score += 25;
+            } else if (abs < 5.05) {
+                score += 10;
+            }
+        }
+
+        if (request.direction == elevatorController.getDirection()){
+            if (request.direction == Direction.UP && distance > 0.05) {
+                score += 100;
+            }
+
+            if (request.direction == Direction.DOWN && distance < -0.05) {
+                score += 100;
+            }
+        }
+
+        return score;
+    }
+
+    public ElevatorController getBestElevator(FloorButtonRequest request) {
+        ElevatorController bestElevator = null;
+        int bestScore = Integer.MIN_VALUE;
+        for (ElevatorController elevatorController : elevatorControllers) {
+            int score = score(request, elevatorController);
+            if (score > bestScore){
+                bestElevator = elevatorController;
+                bestScore = score;
+            }
+        }
+        System.out.println("best score: " + bestScore);
+        return bestElevator;
     }
 
     @Override
@@ -27,7 +74,7 @@ public class WorkOptimizer implements Runnable{
         while (true) {
             try {
                 FloorButtonRequest request = floorButtonRequests.take();
-                elevatorControllers.get(0).registerFloorRequest(request.floor);
+                getBestElevator(request).registerFloorRequest(request.floor);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

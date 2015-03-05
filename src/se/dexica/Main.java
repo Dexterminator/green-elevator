@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Main {
-    private static final int numberOfElevators = 3;
+    private static final int numberOfElevators = 1;
 
     public static void main(String[] args) throws IOException {
         Connector connector = new Connector();

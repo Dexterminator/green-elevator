@@ -5,11 +5,10 @@ package se.dexica;
  */
 public class FloorButtonRequest {
     public final int floor;
-    public final FloorButtonRequest.direction requestedDirection;
-    public enum direction {UP, DOWN};
+    public final Direction direction;
 
-    public FloorButtonRequest(int floor, direction requestedDirection) {
+    public FloorButtonRequest(int floor, Direction direction) {
         this.floor = floor;
-        this.requestedDirection = requestedDirection;
+        this.direction = direction;
     }
 }

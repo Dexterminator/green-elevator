@@ -17,15 +17,14 @@ public class EventDelegator implements Runnable {
         this.workOptimizer = workOptimizer;
     }
 
-    private void readEvents() throws IOException {
+    private void readEvents() throws IOException, InterruptedException {
         String line;
         while ((line = connector.readLine()) != null) {
-            System.out.println(line);
             parseEvent(line);
         }
     }
 
-    private void parseEvent(String event) {
+    private void parseEvent(String event) throws InterruptedException {
         String[] eventComponents = event.split(" ");
         String commandType = eventComponents[0];
         if (commandType.equals("p")) {
@@ -39,20 +38,20 @@ public class EventDelegator implements Runnable {
         }
     }
 
-    private void delegatePanelEvent(String elevatorString, String floorString) {
+    private void delegatePanelEvent(String elevatorString, String floorString) throws InterruptedException {
         int elevator = Integer.parseInt(elevatorString) - 1;
         int floor = Integer.parseInt(floorString);
         elevatorControllers.get(elevator).registerFloorRequest(floor);
     }
 
-    private void delegateFloorButtonEvent(String floorString, String directionString) {
+    private void delegateFloorButtonEvent(String floorString, String directionString) throws InterruptedException {
         int floor = Integer.parseInt(floorString);
         int directionInt = Integer.parseInt(directionString);
-        FloorButtonRequest.direction direction;
+        Direction direction;
         switch (directionInt) {
-            case 1: direction = FloorButtonRequest.direction.UP;
+            case 1: direction = Direction.UP;
                 break;
-            case -1: direction = FloorButtonRequest.direction.DOWN;
+            case -1: direction = Direction.DOWN;
                 break;
             default: throw new IllegalArgumentException("wat");
         }
@@ -74,6 +73,8 @@ public class EventDelegator implements Runnable {
         try {
             readEvents();
         } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
