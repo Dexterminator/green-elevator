@@ -10,7 +10,7 @@ import java.util.concurrent.BlockingQueue;
  * Created by dexter on 04/03/15.
  */
 public class ElevatorController implements Runnable {
-    private Connector connector;
+    private CommandSender commandSender;
     private final int id;
     private float position = 0.0f;
     private Direction direction = Direction.NONE;
@@ -18,10 +18,11 @@ public class ElevatorController implements Runnable {
     private List<Integer> stashedRequests = new ArrayList<Integer>();
     private List<Integer> currentPath = new ArrayList<Integer>();
     private int destination;
+    private FloorButtonRequest currentRequest;
 
-    public ElevatorController(int id, Connector connector) {
+    public ElevatorController(int id, CommandSender commandSender) {
         this.id = id;
-        this.connector = connector;
+        this.commandSender = commandSender;
     }
 
     public synchronized void registerFloorRequest(FloorButtonRequest floorButtonRequest) throws InterruptedException {
@@ -41,17 +42,15 @@ public class ElevatorController implements Runnable {
         float abs = Math.abs(position - (float) destination);
         if (abs < 0.05) {
             System.out.println("Arriving at destination, yeah!");
-            connector.printLine("m " + id + " " + 0);
-            connector.printLine("d " + id + " " + 1);
+            commandSender.stop(id);
+            commandSender.openDoor(id);
             Thread.sleep(1000);
-            connector.printLine("d " + id + " " + -1);
+            commandSender.closeDoor(id);
             Thread.sleep(1000);
             if (!currentPath.isEmpty()) {
                 System.out.println("Stuff in current path");
                 destination = currentPath.remove(currentPath.size()-1);
-                String output = "m " + id + " " + (direction == Direction.UP ? 1 : -1);
-                connector.printLine(output);
-                System.out.println("Moving command made: " + output);
+                commandSender.move(direction, id);
             } else if (!stashedRequests.isEmpty()) {
                 System.out.println(stashedRequests);
                 currentPath.addAll(stashedRequests);
@@ -63,8 +62,7 @@ public class ElevatorController implements Runnable {
                     Collections.sort(currentPath);
                 }
                 destination = currentPath.remove(currentPath.size()-1);
-                String output = "m " + id + " " + (direction == Direction.UP ? 1 : -1);
-                connector.printLine(output);
+                commandSender.move(direction, id);
             } else {
                 System.out.println("Path and stashed are empty");
                 direction = Direction.NONE;
@@ -84,29 +82,6 @@ public class ElevatorController implements Runnable {
         return destination;
     }
 
-//    private void move() throws InterruptedException {
-//        //TODO: Handle this in updatePosition instead!
-//        if (getPosition() > destination) {
-//            direction = Direction.DOWN;
-//        } else {
-//            direction = Direction.UP;
-//        }
-//        String output = "m " + id + " " + (direction == Direction.UP ? 1 : -1);
-//        System.out.println("Moving command made: " + output);
-//        connector.printLine(output);
-//        float abs = Math.abs(getPosition() - (float) destination);
-//        while (abs < 0.05) {
-//            abs = Math.abs(getPosition() - (float) destination);
-//        }
-//        System.out.println("Arriving at destination, yeah!");
-//        connector.printLine("m " + id + " " + 0);
-//        connector.printLine("d " + id + " " + 1);
-//        Thread.sleep(1000);
-//        connector.printLine("d " + id + " " + -1);
-//        Thread.sleep(1000);
-//        direction = Direction.NONE;
-//    }
-
     @Override
     public void run() {
         while (true) {
@@ -119,8 +94,7 @@ public class ElevatorController implements Runnable {
         }
     }
 
-    private synchronized void serveRequest(FloorButtonRequest newRequest) throws InterruptedException {
-//        FloorButtonRequest newRequest = floorRequests.take();ä
+    private void serveRequest(FloorButtonRequest newRequest) throws InterruptedException {
         int newFloor = newRequest.floor;
         if (direction == Direction.NONE) {
             destination = newFloor;
@@ -129,9 +103,7 @@ public class ElevatorController implements Runnable {
             } else {
                 direction = Direction.UP;
             }
-            String output = "m " + id + " " + (direction == Direction.UP ? 1 : -1);
-            connector.printLine(output);
-            System.out.println("Moving command made: " + output);
+            commandSender.move(direction, id);
         } else if (direction == Direction.UP) {
             if (newFloor < destination && newFloor - getPosition() > 0.05) {
                 currentPath.add(destination);

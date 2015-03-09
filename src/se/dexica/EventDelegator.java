@@ -20,7 +20,6 @@ public class EventDelegator implements Runnable {
     private void readEvents() throws IOException, InterruptedException {
         String line;
         while ((line = connector.readLine()) != null) {
-            System.out.println(line);
             parseEvent(line);
         }
     }

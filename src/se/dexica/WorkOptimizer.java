@@ -50,6 +50,7 @@ public class WorkOptimizer implements Runnable{
             }
         }
 
+        System.out.println("score: " + score);
         return score;
     }
 
