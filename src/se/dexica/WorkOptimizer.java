@@ -72,7 +72,7 @@ public class WorkOptimizer implements Runnable{
         while (true) {
             try {
                 FloorButtonRequest request = floorButtonRequests.take();
-                getBestElevator(request).registerFloorRequest(request.floor);
+                getBestElevator(request).registerFloorRequest(request);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

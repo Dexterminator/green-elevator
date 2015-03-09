@@ -20,6 +20,7 @@ public class EventDelegator implements Runnable {
     private void readEvents() throws IOException, InterruptedException {
         String line;
         while ((line = connector.readLine()) != null) {
+            System.out.println(line);
             parseEvent(line);
         }
     }
@@ -41,7 +42,7 @@ public class EventDelegator implements Runnable {
     private void delegatePanelEvent(String elevatorString, String floorString) throws InterruptedException {
         int elevator = Integer.parseInt(elevatorString) - 1;
         int floor = Integer.parseInt(floorString);
-        elevatorControllers.get(elevator).registerFloorRequest(floor);
+        elevatorControllers.get(elevator).registerFloorRequest(new FloorButtonRequest(floor, Direction.NONE));
     }
 
     private void delegateFloorButtonEvent(String floorString, String directionString) throws InterruptedException {
@@ -58,7 +59,7 @@ public class EventDelegator implements Runnable {
         workOptimizer.registerFloorButtonRequest(floor, direction);
     }
 
-    private void delegatePositionEvent(String elevatorString, String positionString) {
+    private void delegatePositionEvent(String elevatorString, String positionString) throws InterruptedException {
         int elevator = Integer.parseInt(elevatorString) - 1;
         float position = Float.parseFloat(positionString);
         elevatorControllers.get(elevator).updatePosition(position);
