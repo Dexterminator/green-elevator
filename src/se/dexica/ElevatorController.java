@@ -15,10 +15,9 @@ public class ElevatorController implements Runnable {
     private float position = 0.0f;
     private Direction direction = Direction.NONE;
     private BlockingQueue<FloorButtonRequest> floorRequests = new ArrayBlockingQueue<FloorButtonRequest>(2000);
-    private List<Integer> stashedRequests = new ArrayList<Integer>();
-    private List<Integer> currentPath = new ArrayList<Integer>();
-    private int destination;
-    private FloorButtonRequest currentRequest;
+    private List<FloorButtonRequest> stashedRequests = new ArrayList<FloorButtonRequest>();
+    private List<FloorButtonRequest> currentPath = new ArrayList<FloorButtonRequest>();
+    private FloorButtonRequest destination;
 
     public ElevatorController(int id, CommandSender commandSender) {
         this.id = id;
@@ -28,7 +27,7 @@ public class ElevatorController implements Runnable {
     public synchronized void registerFloorRequest(FloorButtonRequest floorButtonRequest) throws InterruptedException {
         System.out.println("Added new request to list");
         if (floorButtonRequest.direction != direction && floorButtonRequest.direction != Direction.NONE && direction != Direction.NONE) {
-            stashedRequests.add(floorButtonRequest.floor);
+            stashedRequests.add(floorButtonRequest);
         } else {
             floorRequests.put(floorButtonRequest);
         }
@@ -36,10 +35,11 @@ public class ElevatorController implements Runnable {
     }
 
     public synchronized void updatePosition(float newPosition) throws InterruptedException {
+        System.out.println(id + ": position update: " + newPosition);
         if (position == newPosition)
             return;
         position = newPosition;
-        float abs = Math.abs(position - (float) destination);
+        float abs = Math.abs(position - (float) destination.floor);
         if (abs < 0.05) {
             System.out.println("Arriving at destination, yeah!");
             commandSender.stop(id);
@@ -78,7 +78,7 @@ public class ElevatorController implements Runnable {
         return direction;
     }
 
-    public synchronized int getDestination() {
+    public synchronized FloorButtonRequest getDestination() {
         return destination;
     }
 
@@ -97,36 +97,36 @@ public class ElevatorController implements Runnable {
     private void serveRequest(FloorButtonRequest newRequest) throws InterruptedException {
         int newFloor = newRequest.floor;
         if (direction == Direction.NONE) {
-            destination = newFloor;
-            if (getPosition() > destination) {
+            destination = newRequest;
+            if (getPosition() > destination.floor) {
                 direction = Direction.DOWN;
             } else {
                 direction = Direction.UP;
             }
             commandSender.move(direction, id);
         } else if (direction == Direction.UP) {
-            if (newFloor < destination && newFloor - getPosition() > 0.05) {
+            if (newFloor < destination.floor && newFloor - getPosition() > 0.05) {
                 currentPath.add(destination);
                 Collections.sort(currentPath, Collections.reverseOrder());
                 System.out.println(currentPath);
-                destination = newFloor;
-            } else if (newFloor > destination) {
-                currentPath.add(newFloor);
+                destination = newRequest;
+            } else if (newFloor > destination.floor) {
+                currentPath.add(newRequest);
                 Collections.sort(currentPath, Collections.reverseOrder());
                 System.out.println(currentPath);
             } else {
-                stashedRequests.add(newFloor);
+                stashedRequests.add(newRequest);
             }
         } else if (direction == Direction.DOWN) {
-            if (newFloor > destination && newFloor - getPosition() < -0.05) {
+            if (newFloor > destination.floor && newFloor - getPosition() < -0.05) {
                 currentPath.add(destination);
                 Collections.sort(currentPath, Collections.reverseOrder());
-                destination = newFloor;
-            } else if (newFloor < destination) {
-                currentPath.add(newFloor);
+                destination = newRequest;
+            } else if (newFloor < destination.floor) {
+                currentPath.add(newRequest);
                 Collections.sort(currentPath, Collections.reverseOrder());
             } else {
-                stashedRequests.add(newFloor);
+                stashedRequests.add(newRequest);
             }
         }
 

@@ -40,7 +40,7 @@ public class WorkOptimizer implements Runnable{
             }
         }
 
-        if (request.direction == elevatorController.getDirection()){
+        if (request.direction == elevatorController.getDirection() && request.direction == elevatorController.getDestination().direction){
             if (request.direction == Direction.UP && distance > 0.05) {
                 score += 100;
             }
