@@ -35,7 +35,7 @@ public class ElevatorController implements Runnable {
     }
 
     public synchronized void updatePosition(float newPosition) throws InterruptedException {
-        System.out.println(id + ": position update: " + newPosition);
+        System.out.println(id + ": position update: " + newPosition + ". Destination: " + destination);
         if (position == newPosition)
             return;
         position = newPosition;

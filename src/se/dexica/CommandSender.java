@@ -16,14 +16,14 @@ public class CommandSender {
     }
 
     public void stop (int id) {
-        connector.printLine("m " + id + " " + 0);
+        connector.printLine("m " + id + " 0");
     }
 
     public void openDoor(int id) {
-        connector.printLine("d " + id + " " + 1);
+        connector.printLine("d " + id + " 1");
     }
 
     public void closeDoor(int id) {
-        connector.printLine("d " + id + " " + -1);
+        connector.printLine("d " + id + " -1");
     }
 }
