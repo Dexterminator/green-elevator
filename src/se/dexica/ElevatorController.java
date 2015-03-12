@@ -59,17 +59,19 @@ public class ElevatorController implements Runnable {
     }
 
     public boolean onWayToDestination(FloorRequest otherRequest) {
-        if (intendedDirection == Direction.UP && isFloorBelow(otherRequest.floor, destination.floor) && isElevatorBelowFloor(otherRequest.floor)) {
+        if (intendedDirection == Direction.UP && isFloorBelow(otherRequest.floor, destination.floor)
+                && ((isElevatorBelowFloor(otherRequest.floor) && direction == Direction.UP) || direction == Direction.DOWN)) {
             return true;
         }
-        if (intendedDirection == Direction.DOWN && isFloorAbove(otherRequest.floor, destination.floor) && isElevatorAboveFloor(otherRequest.floor)) {
+        if (intendedDirection == Direction.DOWN && isFloorAbove(otherRequest.floor, destination.floor)
+                && ((isElevatorAboveFloor(otherRequest.floor) && direction == Direction.DOWN) || direction == Direction.UP)) {
             return true;
         }
         return false;
     }
 
     public synchronized void updatePosition(float newPosition) throws InterruptedException {
-        System.out.println(id + ": position update: " + newPosition + ". Destination: " + destination);
+//        System.out.println(id + ": position update: " + newPosition + ". Destination: " + destination);
 
         if (isElevatorAboveFloor(destination.floor) && newPosition > position) {
             System.out.println("Going up even though destination is lower!");
@@ -175,6 +177,7 @@ public class ElevatorController implements Runnable {
         System.out.println("new request: " + newRequest);
         System.out.println("uppath: " + upPath);
         System.out.println("downpath: " + downPath);
+        System.out.println("destination: " + destination);
     }
 
     private void handlePanelRequest(FloorRequest newRequest) {
@@ -192,7 +195,7 @@ public class ElevatorController implements Runnable {
                 downPath.add(newRequest);
                 sortDownPath();
             } else {
-                System.out.println("Direction and intended direction up, no case matched");
+                System.out.println("Direction and intended direction up. no case matched");
             }
         } else if (intendedDirection == Direction.DOWN && direction == Direction.DOWN) {
             if (onWayToDestination(newRequest)) {
@@ -207,7 +210,7 @@ public class ElevatorController implements Runnable {
                 upPath.add(newRequest);
                 sortUpPath();
             } else {
-                System.out.println("Direction and intended direction down, no case matched");
+                System.out.println("Direction and intended direction down. no case matched");
             }
         } else {
             System.out.println("No case for this panel request");
@@ -231,16 +234,20 @@ public class ElevatorController implements Runnable {
             upPath.add(destination);
             destination = newRequest;
         } else {
-            upPath.add(destination);
+            upPath.add(newRequest);
         }
         sortUpPath();
     }
 
-    private void initiateMoveFromInactive(FloorRequest newRequest) {
-        destination = newRequest;
-        direction = isElevatorBelowFloor(newRequest.floor) ? Direction.UP : Direction.DOWN;
-        commandSender.move(direction, id);
-        intendedDirection = destination.direction == Direction.NONE ? direction : direction;
+    private void initiateMoveFromInactive(FloorRequest newRequest) throws InterruptedException {
+        if (isElevatorAtFloor(newRequest.floor)) {
+            stopAtFloor();
+        } else {
+            direction = isElevatorBelowFloor(newRequest.floor) ? Direction.UP : Direction.DOWN;
+            destination = newRequest;
+            commandSender.move(direction, id);
+            intendedDirection = destination.direction == Direction.NONE ? direction : destination.direction;
+        }
     }
 
     @Override
