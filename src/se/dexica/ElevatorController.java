@@ -58,13 +58,23 @@ public class ElevatorController implements Runnable {
         Collections.sort(downPath);
     }
 
+    public boolean isNewTurnAroundGoal(FloorRequest otherRequest) {
+        if (intendedDirection == Direction.UP && direction == Direction.DOWN && isFloorBelow(otherRequest.floor, destination.floor)) {
+            return true;
+        }
+        if (intendedDirection == Direction.DOWN && direction == Direction.UP && isFloorAbove(otherRequest.floor, destination.floor)) {
+            return true;
+        }
+        return false;
+    }
+
     public boolean onWayToDestination(FloorRequest otherRequest) {
         if (intendedDirection == Direction.UP && isFloorBelow(otherRequest.floor, destination.floor)
-                && ((isElevatorBelowFloor(otherRequest.floor) && direction == Direction.UP) || direction == Direction.DOWN)) {
+                && isElevatorBelowFloor(otherRequest.floor) && direction == Direction.UP) {
             return true;
         }
         if (intendedDirection == Direction.DOWN && isFloorAbove(otherRequest.floor, destination.floor)
-                && ((isElevatorAboveFloor(otherRequest.floor) && direction == Direction.DOWN) || direction == Direction.UP)) {
+                && isElevatorAboveFloor(otherRequest.floor) && direction == Direction.DOWN) {
             return true;
         }
         return false;
@@ -219,7 +229,7 @@ public class ElevatorController implements Runnable {
 
     private void handleDownRequest(FloorRequest newRequest) {
         System.out.println("Handling down request");
-        if (onWayToDestination(newRequest)) {
+        if (onWayToDestination(newRequest) || isNewTurnAroundGoal(newRequest)) {
             downPath.add(destination);
             destination = newRequest;
         } else {
@@ -230,7 +240,7 @@ public class ElevatorController implements Runnable {
 
     private void handleUpRequest(FloorRequest newRequest) {
         System.out.println("Handling up request");
-        if (onWayToDestination(newRequest)) {
+        if (onWayToDestination(newRequest) || isNewTurnAroundGoal(newRequest)) {
             upPath.add(destination);
             destination = newRequest;
         } else {
