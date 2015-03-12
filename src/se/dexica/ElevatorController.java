@@ -12,62 +12,140 @@ import java.util.concurrent.BlockingQueue;
 public class ElevatorController implements Runnable {
     private CommandSender commandSender;
     private final int id;
-    private float position = 0.0f;
+    private volatile float position = 0.0f;
     private Direction direction = Direction.NONE;
-    private BlockingQueue<FloorButtonRequest> floorRequests = new ArrayBlockingQueue<FloorButtonRequest>(2000);
-    private List<FloorButtonRequest> stashedRequests = new ArrayList<FloorButtonRequest>();
-    private List<FloorButtonRequest> currentPath = new ArrayList<FloorButtonRequest>();
-    private FloorButtonRequest destination;
+    private Direction intendedDirection = Direction.NONE;
+
+    private BlockingQueue<FloorRequest> floorRequests = new ArrayBlockingQueue<FloorRequest>(2000);
+    private List<FloorRequest> upPath = new ArrayList<FloorRequest>();
+    private List<FloorRequest> downPath = new ArrayList<FloorRequest>();
+    private FloorRequest destination;
 
     public ElevatorController(int id, CommandSender commandSender) {
         this.id = id;
         this.commandSender = commandSender;
     }
 
-    public synchronized void registerFloorRequest(FloorButtonRequest floorButtonRequest) throws InterruptedException {
-        System.out.println("Added new request to list");
-        if (floorButtonRequest.direction != direction && floorButtonRequest.direction != Direction.NONE && direction != Direction.NONE) {
-            stashedRequests.add(floorButtonRequest);
-        } else {
-            floorRequests.put(floorButtonRequest);
+    public synchronized void registerFloorRequest(FloorRequest floorRequest) throws InterruptedException {
+        floorRequests.put(floorRequest);
+    }
+
+    public boolean isElevatorAtFloor(int floor) {
+        return Math.abs(position - (float) floor) < 0.05;
+    }
+
+    public boolean isElevatorAboveFloor(int floor) {
+        return (position - (float) floor) > 0.05;
+    }
+
+    public boolean isElevatorBelowFloor(int floor) {
+        return (position - (float) floor) < -0.05;
+    }
+
+    public boolean isFloorBelow (int floor1, int floor2) {
+        return floor1 - floor2 < 0;
+    }
+
+    public boolean isFloorAbove (int floor1, int floor2) {
+        return floor1 - floor2 > 0;
+    }
+
+    public void sortUpPath() {
+        Collections.sort(upPath, Collections.reverseOrder());
+    }
+
+    public void sortDownPath() {
+        Collections.sort(downPath);
+    }
+
+    public boolean onWayToDestination(FloorRequest otherRequest) {
+        if (intendedDirection == Direction.UP && isFloorBelow(otherRequest.floor, destination.floor) && isElevatorBelowFloor(otherRequest.floor)) {
+            return true;
         }
-        System.out.println("Floor request list size: " + floorRequests.size());
+        if (intendedDirection == Direction.DOWN && isFloorAbove(otherRequest.floor, destination.floor) && isElevatorAboveFloor(otherRequest.floor)) {
+            return true;
+        }
+        return false;
     }
 
     public synchronized void updatePosition(float newPosition) throws InterruptedException {
         System.out.println(id + ": position update: " + newPosition + ". Destination: " + destination);
-        if (position == newPosition)
+
+        if (isElevatorAboveFloor(destination.floor) && newPosition > position) {
+            System.out.println("Going up even though destination is lower!");
+        }
+
+        if (isElevatorBelowFloor(destination.floor) && newPosition < position) {
+            System.out.println("Going down even though destination is higher!");
+        }
+
+        if (position == newPosition) {
             return;
+        }
+
         position = newPosition;
-        float abs = Math.abs(position - (float) destination.floor);
-        if (abs < 0.05) {
-            System.out.println("Arriving at destination, yeah!");
-            commandSender.stop(id);
-            commandSender.openDoor(id);
-            Thread.sleep(1000);
-            commandSender.closeDoor(id);
-            Thread.sleep(1000);
-            if (!currentPath.isEmpty()) {
-                System.out.println("Stuff in current path");
-                destination = currentPath.remove(currentPath.size()-1);
-                commandSender.move(direction, id);
-            } else if (!stashedRequests.isEmpty()) {
-                System.out.println(stashedRequests);
-                currentPath.addAll(stashedRequests);
-                stashedRequests.clear();
-                direction = direction == Direction.UP ? Direction.DOWN : Direction.UP;
-                if (direction == Direction.UP) {
-                    Collections.sort(currentPath, Collections.reverseOrder());
+        if (isElevatorAtFloor(destination.floor)) {
+            stopAtFloor();
+            boolean resolved = false;
+            while (!resolved) {
+                // No requests
+                if (upPath.isEmpty() && downPath.isEmpty()) {
+                    System.out.println("Up and down are empty! Direction set to none.");
+                    intendedDirection = Direction.NONE;
+                    direction = Direction.NONE;
+                    resolved = true;
+
+                // We are currently trying to serve requests that are going up
+                } else if (intendedDirection == Direction.UP) {
+                    if (!upPath.isEmpty()) {
+                        FloorRequest newDestination = upPath.remove(upPath.size() - 1);
+                        if (destination.floor == newDestination.floor) {
+                            stopAtFloor(); // Same floor, do not set as resolved
+                        } else {
+                            destination = newDestination;
+                            direction = isElevatorBelowFloor(destination.floor) ? Direction.UP : Direction.DOWN;
+                            commandSender.move(direction, id);
+                            resolved = true;
+                        }
+                    } else {
+                        System.out.println("UpPath empty! Time to switch intended direction!");
+                        intendedDirection = Direction.DOWN;
+                    }
+
+                // We are currently trying to serve requests that are going down
+                } else if (intendedDirection == Direction.DOWN) {
+                    if (!downPath.isEmpty()) {
+                        FloorRequest newDestination = downPath.remove(downPath.size() - 1);
+                        if (destination.floor == newDestination.floor) {
+                            stopAtFloor(); // Same floor, do not set as resolved
+                        } else {
+                            destination = newDestination;
+                            direction = isElevatorBelowFloor(destination.floor) ? Direction.UP : Direction.DOWN;
+                            commandSender.move(direction, id);
+                            resolved = true;
+                        }
+                    } else {
+                        System.out.println("DownPath empty! Time to switch intended direction!");
+                        intendedDirection = Direction.UP;
+                    }
+
+                // Somehow, none of the above was matched. Should not happen.
                 } else {
-                    Collections.sort(currentPath);
+                    System.out.println("No case matched, wat");
                 }
-                destination = currentPath.remove(currentPath.size()-1);
-                commandSender.move(direction, id);
-            } else {
-                System.out.println("Path and stashed are empty");
-                direction = Direction.NONE;
             }
         }
+    }
+
+    private void stopAtFloor() throws InterruptedException {
+        System.out.println("Arrived at destination!");
+        System.out.println("UpPath: " + upPath);
+        System.out.println("DownPath: " + downPath);
+        commandSender.stop(id);
+        commandSender.openDoor(id);
+        Thread.sleep(1000);
+        commandSender.closeDoor(id);
+        Thread.sleep(1000);
     }
 
     public synchronized float getPosition() {
@@ -78,58 +156,102 @@ public class ElevatorController implements Runnable {
         return direction;
     }
 
-    public synchronized FloorButtonRequest getDestination() {
+    public synchronized FloorRequest getDestination() {
         return destination;
+    }
+
+    private void serveRequest(FloorRequest newRequest) throws InterruptedException {
+        if (direction == Direction.NONE) {
+            initiateMoveFromInactive(newRequest);
+        } else if (newRequest.direction == Direction.UP) {
+            handleUpRequest(newRequest);
+        } else if (newRequest.direction == Direction.DOWN) {
+            handleDownRequest(newRequest);
+        } else if (newRequest.direction == Direction.NONE) {
+            handlePanelRequest(newRequest);
+        } else {
+            System.out.println("No case matched by request");
+        }
+        System.out.println("new request: " + newRequest);
+        System.out.println("uppath: " + upPath);
+        System.out.println("downpath: " + downPath);
+    }
+
+    private void handlePanelRequest(FloorRequest newRequest) {
+        System.out.println("Handling panel request");
+        if (intendedDirection == Direction.UP && direction == Direction.UP) {
+            if (onWayToDestination(newRequest)) {
+                System.out.println("request " + newRequest + " is on the way to destination " + destination);
+                upPath.add(destination);
+                sortUpPath();
+                destination = newRequest;
+            } else if (isElevatorBelowFloor(newRequest.floor)) {
+                upPath.add(newRequest);
+                sortUpPath();
+            } else if (isElevatorAboveFloor(newRequest.floor)) {
+                downPath.add(newRequest);
+                sortDownPath();
+            } else {
+                System.out.println("Direction and intended direction up, no case matched");
+            }
+        } else if (intendedDirection == Direction.DOWN && direction == Direction.DOWN) {
+            if (onWayToDestination(newRequest)) {
+                System.out.println("request " + newRequest + " is on the way to destination " + destination);
+                downPath.add(destination);
+                sortDownPath();
+                destination = newRequest;
+            } else if (isElevatorAboveFloor(newRequest.floor)) {
+                downPath.add(newRequest);
+                sortDownPath();
+            } else if (isElevatorBelowFloor(newRequest.floor)) {
+                upPath.add(newRequest);
+                sortUpPath();
+            } else {
+                System.out.println("Direction and intended direction down, no case matched");
+            }
+        } else {
+            System.out.println("No case for this panel request");
+        }
+    }
+
+    private void handleDownRequest(FloorRequest newRequest) {
+        System.out.println("Handling down request");
+        if (onWayToDestination(newRequest)) {
+            downPath.add(destination);
+            destination = newRequest;
+        } else {
+            downPath.add(newRequest);
+        }
+        sortDownPath();
+    }
+
+    private void handleUpRequest(FloorRequest newRequest) {
+        System.out.println("Handling up request");
+        if (onWayToDestination(newRequest)) {
+            upPath.add(destination);
+            destination = newRequest;
+        } else {
+            upPath.add(destination);
+        }
+        sortUpPath();
+    }
+
+    private void initiateMoveFromInactive(FloorRequest newRequest) {
+        destination = newRequest;
+        direction = isElevatorBelowFloor(newRequest.floor) ? Direction.UP : Direction.DOWN;
+        commandSender.move(direction, id);
+        intendedDirection = destination.direction == Direction.NONE ? direction : direction;
     }
 
     @Override
     public void run() {
         while (true) {
             try {
-                FloorButtonRequest newRequest = floorRequests.take();
+                FloorRequest newRequest = floorRequests.take();
                 serveRequest(newRequest);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
-    }
-
-    private void serveRequest(FloorButtonRequest newRequest) throws InterruptedException {
-        int newFloor = newRequest.floor;
-        if (direction == Direction.NONE) {
-            destination = newRequest;
-            if (getPosition() > destination.floor) {
-                direction = Direction.DOWN;
-            } else {
-                direction = Direction.UP;
-            }
-            commandSender.move(direction, id);
-        } else if (direction == Direction.UP) {
-            if (newFloor < destination.floor && newFloor - getPosition() > 0.05) {
-                currentPath.add(destination);
-                Collections.sort(currentPath, Collections.reverseOrder());
-                System.out.println(currentPath);
-                destination = newRequest;
-            } else if (newFloor > destination.floor) {
-                currentPath.add(newRequest);
-                Collections.sort(currentPath, Collections.reverseOrder());
-                System.out.println(currentPath);
-            } else {
-                stashedRequests.add(newRequest);
-            }
-        } else if (direction == Direction.DOWN) {
-            if (newFloor > destination.floor && newFloor - getPosition() < -0.05) {
-                currentPath.add(destination);
-                Collections.sort(currentPath, Collections.reverseOrder());
-                destination = newRequest;
-            } else if (newFloor < destination.floor) {
-                currentPath.add(newRequest);
-                Collections.sort(currentPath, Collections.reverseOrder());
-            } else {
-                stashedRequests.add(newRequest);
-            }
-        }
-
-        System.out.println("Destination retrieved making a move");
     }
 }

@@ -54,7 +54,7 @@ public class EventDelegator implements Runnable {
         @Override
         public void run() {
             try {
-                elevatorControllers.get(elevator).registerFloorRequest(new FloorButtonRequest(floor, Direction.NONE));
+                elevatorControllers.get(elevator).registerFloorRequest(new FloorRequest(floor, Direction.NONE));
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

@@ -9,7 +9,7 @@ import java.util.concurrent.BlockingQueue;
  */
 public class WorkOptimizer implements Runnable{
     private List<ElevatorController> elevatorControllers;
-    private BlockingQueue<FloorButtonRequest> floorButtonRequests = new ArrayBlockingQueue<FloorButtonRequest>(2000);
+    private BlockingQueue<FloorRequest> floorRequests = new ArrayBlockingQueue<FloorRequest>(2000);
 
     public WorkOptimizer(List<ElevatorController> elevatorControllers) {
         this.elevatorControllers = elevatorControllers;
@@ -17,10 +17,10 @@ public class WorkOptimizer implements Runnable{
 
     public synchronized void registerFloorButtonRequest(int floor, Direction direction)
         throws InterruptedException {
-        floorButtonRequests.put(new FloorButtonRequest(floor, direction));
+        floorRequests.put(new FloorRequest(floor, direction));
     }
 
-    public int score(FloorButtonRequest request, ElevatorController elevatorController) {
+    public int score(FloorRequest request, ElevatorController elevatorController) {
         int score = 0;
         float distance = (float) request.floor - elevatorController.getPosition();
         if (elevatorController.getDirection() == Direction.NONE) {
@@ -54,7 +54,7 @@ public class WorkOptimizer implements Runnable{
         return score;
     }
 
-    public ElevatorController getBestElevator(FloorButtonRequest request) {
+    public ElevatorController getBestElevator(FloorRequest request) {
         ElevatorController bestElevator = null;
         int bestScore = Integer.MIN_VALUE;
         for (ElevatorController elevatorController : elevatorControllers) {
@@ -72,7 +72,7 @@ public class WorkOptimizer implements Runnable{
     public void run() {
         while (true) {
             try {
-                FloorButtonRequest request = floorButtonRequests.take();
+                FloorRequest request = floorRequests.take();
                 getBestElevator(request).registerFloorRequest(request);
             } catch (InterruptedException e) {
                 e.printStackTrace();
