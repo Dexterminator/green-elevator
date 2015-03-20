@@ -48,13 +48,17 @@ public class EventDelegator implements Runnable {
 
         public DelegatePanelEvent(String elevatorString, String floorString) {
             this.elevator = Integer.parseInt(elevatorString) - 1;
-            this. floor = Integer.parseInt(floorString);
+            this.floor = Integer.parseInt(floorString);
         }
 
         @Override
         public void run() {
             try {
-                elevatorControllers.get(elevator).registerFloorRequest(new FloorRequest(floor, Direction.NONE));
+                if (floor == 32000) {
+                    elevatorControllers.get(elevator).stop();
+                } else {
+                    elevatorControllers.get(elevator).registerFloorRequest(new FloorRequest(floor, Direction.NONE));
+                }
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

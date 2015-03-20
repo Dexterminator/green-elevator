@@ -80,9 +80,16 @@ public class ElevatorController implements Runnable {
         return false;
     }
 
-    public synchronized void updatePosition(float newPosition) throws InterruptedException {
-//        System.out.println(id + ": position update: " + newPosition + ". Destination: " + destination);
+    public void stop() {
+        commandSender.stop(id);
+        upPath.clear();
+        downPath.clear();
+        floorRequests.clear();
+        direction = Direction.NONE;
+        intendedDirection = Direction.NONE;
+    }
 
+    public synchronized void updatePosition(float newPosition) throws InterruptedException {
         if (isElevatorAboveFloor(destination.floor) && newPosition > position) {
             System.out.println("Going up even though destination is lower!");
         }
@@ -96,57 +103,74 @@ public class ElevatorController implements Runnable {
         }
 
         position = newPosition;
+        checkArrival();
+    }
+
+    private void checkArrival() throws InterruptedException {
         if (isElevatorAtFloor(destination.floor)) {
             stopAtFloor();
             boolean resolved = false;
             while (!resolved) {
-                // No requests
                 if (upPath.isEmpty() && downPath.isEmpty()) {
-                    System.out.println("Up and down are empty! Direction set to none.");
-                    intendedDirection = Direction.NONE;
-                    direction = Direction.NONE;
-                    resolved = true;
-
-                // We are currently trying to serve requests that are going up
+                    // No requests
+                    resolved = resolveNoRequestsArrival();
                 } else if (intendedDirection == Direction.UP) {
-                    if (!upPath.isEmpty()) {
-                        FloorRequest newDestination = upPath.remove(upPath.size() - 1);
-                        if (destination.floor == newDestination.floor) {
-                            stopAtFloor(); // Same floor, do not set as resolved
-                        } else {
-                            destination = newDestination;
-                            direction = isElevatorBelowFloor(destination.floor) ? Direction.UP : Direction.DOWN;
-                            commandSender.move(direction, id);
-                            resolved = true;
-                        }
-                    } else {
-                        System.out.println("UpPath empty! Time to switch intended direction!");
-                        intendedDirection = Direction.DOWN;
-                    }
-
-                // We are currently trying to serve requests that are going down
+                    // We are currently trying to serve requests that are going up
+                    resolved = resolveUpRequestsArrival(resolved);
                 } else if (intendedDirection == Direction.DOWN) {
-                    if (!downPath.isEmpty()) {
-                        FloorRequest newDestination = downPath.remove(downPath.size() - 1);
-                        if (destination.floor == newDestination.floor) {
-                            stopAtFloor(); // Same floor, do not set as resolved
-                        } else {
-                            destination = newDestination;
-                            direction = isElevatorBelowFloor(destination.floor) ? Direction.UP : Direction.DOWN;
-                            commandSender.move(direction, id);
-                            resolved = true;
-                        }
-                    } else {
-                        System.out.println("DownPath empty! Time to switch intended direction!");
-                        intendedDirection = Direction.UP;
-                    }
-
-                // Somehow, none of the above was matched. Should not happen.
+                    // We are currently trying to serve requests that are going down
+                    resolved = resolveDownRequestsArrival(resolved);
                 } else {
+                    // Somehow, none of the above was matched. Should not happen.
                     System.out.println("No case matched, wat");
                 }
             }
         }
+    }
+
+    private boolean resolveNoRequestsArrival() {
+        boolean resolved;
+        System.out.println("Up and down are empty! Direction set to none.");
+        intendedDirection = Direction.NONE;
+        direction = Direction.NONE;
+        resolved = true;
+        return resolved;
+    }
+
+    private boolean resolveDownRequestsArrival(boolean resolved) throws InterruptedException {
+        if (!downPath.isEmpty()) {
+            FloorRequest newDestination = downPath.remove(downPath.size() - 1);
+            if (destination.floor == newDestination.floor) {
+                stopAtFloor(); // Same floor, do not set as resolved
+            } else {
+                destination = newDestination;
+                direction = isElevatorBelowFloor(destination.floor) ? Direction.UP : Direction.DOWN;
+                commandSender.move(direction, id);
+                resolved = true;
+            }
+        } else {
+            System.out.println("DownPath empty! Time to switch intended direction!");
+            intendedDirection = Direction.UP;
+        }
+        return resolved;
+    }
+
+    private boolean resolveUpRequestsArrival(boolean resolved) throws InterruptedException {
+        if (!upPath.isEmpty()) {
+            FloorRequest newDestination = upPath.remove(upPath.size() - 1);
+            if (destination.floor == newDestination.floor) {
+                stopAtFloor(); // Same floor, do not set as resolved
+            } else {
+                destination = newDestination;
+                direction = isElevatorBelowFloor(destination.floor) ? Direction.UP : Direction.DOWN;
+                commandSender.move(direction, id);
+                resolved = true;
+            }
+        } else {
+            System.out.println("UpPath empty! Time to switch intended direction!");
+            intendedDirection = Direction.DOWN;
+        }
+        return resolved;
     }
 
     private void stopAtFloor() throws InterruptedException {
@@ -226,19 +250,12 @@ public class ElevatorController implements Runnable {
             } else {
                 System.out.println("Direction and intended direction down. no case matched");
             }
-        } else if (intendedDirection == Direction.UP && direction == Direction.DOWN) {
+        } else if ((intendedDirection == Direction.UP && direction == Direction.DOWN) ||
+                (intendedDirection == Direction.DOWN && direction == Direction.UP)) {
             if (isFloorAbove(newRequest.floor, destination.floor)) {
                 upPath.add(newRequest);
                 sortUpPath();
             } else if (isFloorBelow(newRequest.floor, destination.floor)) {
-                downPath.add(newRequest);
-                sortDownPath();
-            }
-        } else if (intendedDirection == Direction.DOWN && direction == Direction.UP) {
-            if (isFloorAbove(newRequest.floor, destination.floor)) {
-                upPath.add(newRequest);
-                sortUpPath();
-            } else {
                 downPath.add(newRequest);
                 sortDownPath();
             }
