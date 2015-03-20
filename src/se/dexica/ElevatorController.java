@@ -168,6 +168,10 @@ public class ElevatorController implements Runnable {
         return direction;
     }
 
+    public synchronized Direction getIntendedDirection() {
+        return intendedDirection;
+    }
+
     public synchronized FloorRequest getDestination() {
         return destination;
     }
@@ -222,8 +226,24 @@ public class ElevatorController implements Runnable {
             } else {
                 System.out.println("Direction and intended direction down. no case matched");
             }
+        } else if (intendedDirection == Direction.UP && direction == Direction.DOWN) {
+            if (isFloorAbove(newRequest.floor, destination.floor)) {
+                upPath.add(newRequest);
+                sortUpPath();
+            } else if (isFloorBelow(newRequest.floor, destination.floor)) {
+                downPath.add(newRequest);
+                sortDownPath();
+            }
+        } else if (intendedDirection == Direction.DOWN && direction == Direction.UP) {
+            if (isFloorAbove(newRequest.floor, destination.floor)) {
+                upPath.add(newRequest);
+                sortUpPath();
+            } else {
+                downPath.add(newRequest);
+                sortDownPath();
+            }
         } else {
-            System.out.println("No case for this panel request");
+            System.out.println("No case for this panel request!");
         }
     }
 
