@@ -99,7 +99,7 @@ public class EventDelegator implements Runnable {
     }
 
     private void delegateVelocityEvent(String velocity) {
-
+        // Velocity is currently not used
     }
 
     @Override
