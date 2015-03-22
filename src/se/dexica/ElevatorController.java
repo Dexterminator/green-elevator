@@ -16,9 +16,9 @@ public class ElevatorController implements Runnable {
     private Direction direction = Direction.NONE;
     private Direction intendedDirection = Direction.NONE;
 
-    private BlockingQueue<FloorRequest> floorRequests = new ArrayBlockingQueue<FloorRequest>(2000);
-    private List<FloorRequest> upPath = new ArrayList<FloorRequest>();
-    private List<FloorRequest> downPath = new ArrayList<FloorRequest>();
+    private BlockingQueue<FloorRequest> floorRequests = new ArrayBlockingQueue<>(2000);
+    private List<FloorRequest> upPath = new ArrayList<>();
+    private List<FloorRequest> downPath = new ArrayList<>();
     private FloorRequest destination;
 
     public ElevatorController(int id, CommandSender commandSender) {
@@ -90,14 +90,6 @@ public class ElevatorController implements Runnable {
     }
 
     public synchronized void updatePosition(float newPosition) throws InterruptedException {
-        if (isElevatorAboveFloor(destination.floor) && newPosition > position) {
-            System.out.println("Going up even though destination is lower!");
-        }
-
-        if (isElevatorBelowFloor(destination.floor) && newPosition < position) {
-            System.out.println("Going down even though destination is higher!");
-        }
-
         if (position == newPosition) {
             return;
         }

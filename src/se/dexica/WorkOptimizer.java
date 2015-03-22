@@ -9,7 +9,7 @@ import java.util.concurrent.BlockingQueue;
  */
 public class WorkOptimizer implements Runnable{
     private List<ElevatorController> elevatorControllers;
-    private BlockingQueue<FloorRequest> floorRequests = new ArrayBlockingQueue<FloorRequest>(2000);
+    private BlockingQueue<FloorRequest> floorRequests = new ArrayBlockingQueue<>(2000);
 
     public WorkOptimizer(List<ElevatorController> elevatorControllers) {
         this.elevatorControllers = elevatorControllers;
