@@ -7,9 +7,12 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 public class Main {
-    private static final int numberOfElevators = 3;
+    private static int numberOfElevators = 3;
 
     public static void main(String[] args) throws IOException {
+        if (args.length > 0) {
+            numberOfElevators = Integer.parseInt(args[0]);
+        }
         Connector connector = new Connector();
         connector.connect();
         List<BlockingQueue<Runnable>> executors = new ArrayList<>();

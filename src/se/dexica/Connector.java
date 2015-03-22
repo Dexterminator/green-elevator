@@ -8,7 +8,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 
 /**
- * Created by dexter on 04/03/15.
+ * Handles the socket connection.
  */
 public class Connector {
     private final Socket socket;

@@ -7,7 +7,9 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 /**
- * Created by dexter on 04/03/15.
+ * Keeps track of the state of one of the elevators. Services requests in one direction at a time, using
+ * the upPath and the downPath to keep track of the requests. Automatically checks if the current destination
+ * should be changed when a new requests come in, in order to optimize movement.
  */
 public class ElevatorController implements Runnable {
     private CommandSender commandSender;

@@ -5,7 +5,8 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 /**
- * Created by dexter on 04/03/15.
+ * Handles floor button requests by checking the current states of the elevators, giving a score
+ * based on this state, and sending the request to the elevator with the highest score.
  */
 public class WorkOptimizer implements Runnable{
     private List<ElevatorController> elevatorControllers;

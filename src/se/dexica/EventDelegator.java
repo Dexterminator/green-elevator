@@ -5,7 +5,9 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 
 /**
- * Created by dexter on 04/03/15.
+ * Reads and parses events from the elevator GUI application. Sends panel button events and position events
+ * to the corresponding elevator, and floor button events to the WorkOptimizer, which decides which elevator
+ * should get the request.
  */
 public class EventDelegator implements Runnable {
     private final List<ElevatorController> elevatorControllers;

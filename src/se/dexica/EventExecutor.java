@@ -3,7 +3,8 @@ package se.dexica;
 import java.util.concurrent.BlockingQueue;
 
 /**
- * Created by dexter on 09/03/15.
+ * Executes the events from the EventDelegator for one of the elevators, making sure that this
+ * is done on separate threads.
  */
 public class EventExecutor implements Runnable {
     private BlockingQueue<Runnable> events;

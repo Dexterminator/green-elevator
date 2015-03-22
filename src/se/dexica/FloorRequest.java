@@ -1,7 +1,7 @@
 package se.dexica;
 
 /**
- * Created by dexter on 04/03/15.
+ * Value class containing a floor and a direction.
  */
 public class FloorRequest implements Comparable<FloorRequest>{
     public final int floor;

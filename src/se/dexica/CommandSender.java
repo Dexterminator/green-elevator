@@ -1,7 +1,7 @@
 package se.dexica;
 
 /**
- * Created by dexter on 09/03/15.
+ * Provides methods for sending some common commands to the elevator GUI.
  */
 public class CommandSender {
     private Connector connector;
